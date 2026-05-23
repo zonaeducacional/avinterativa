@@ -19,7 +19,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center pb-4 mb-6 border-b border-gray-800 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-teal-400 font-mono">π Plickers Livre <span class="text-gray-600">P2P</span></h1>
+                <h1 class="text-3xl font-bold text-teal-400 font-mono">π Livre <span class="text-gray-600">P2P</span></h1>
                 <p class="text-xs text-gray-500">Software Livre de Avaliação Formativa Distribuída</p>
             </div>
             <div id="status-conexao" class="text-xs px-3 py-1.5 rounded-full font-mono bg-red-950 text-red-400 border border-red-900">
@@ -71,10 +71,13 @@
 
                 <div class="space-y-2 mb-6">
                     <input id="input-peer-id" type="text" placeholder="Cole o ID da TV aqui" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-teal-400 text-center">
-                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-lg shadow-lg">1. Conectar à TV</button>
+                    
+                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-lg shadow-lg transition">1. Conectar à TV</button>
+                    
+                    <button onclick="iniciarCamera()" class="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 font-bold text-sm py-3 rounded-lg shadow-lg transition">2. Ativar Lente da Câmera</button>
                 </div>
 
-                <div id="painel-testes" class="hidden border-t border-gray-800 pt-4">
+                <div id="painel-testes" class="hidden border-t border-gray-800 pt-4 mt-2">
                     <h3 class="text-xs font-mono text-teal-500 mb-3 uppercase tracking-wider text-center">Painel de Simulação de Votos</h3>
                     
                     <div class="grid grid-cols-1 gap-3">
@@ -111,9 +114,8 @@
         };
 
         // --- INICIALIZAÇÃO DA REDE P2P (PEERJS) ---
-        // Cria um ID único para este dispositivo na internet
         const peer = new Peer(null, { debug: 2 });
-        let conn; // Armazena a conexão de dados
+        let conn;
 
         peer.on('open', (id) => {
             document.getElementById('status-conexao').innerText = `ID da TV: ${id}`;
@@ -121,14 +123,12 @@
             if (isTV()) renderizarGradeTV();
         });
 
-        // --- LÓGICA DA TV (Notebook Dell) ---
+        // --- LÓGICA DA TV (Notebook) ---
         peer.on('connection', (c) => {
             conn = c;
             atualizarStatusConexao('Conectado P2P', true);
             
-            // Escuta pacotes minúsculos vindo do celular via internet
             conn.on('data', (data) => {
-                console.log('Pacote Recebido:', data);
                 if (data.tipo === 'resposta_scan') processarVotoNoTelão(data);
             });
         });
@@ -139,46 +139,69 @@
 
             const boxDica = document.getElementById('tv-dica-box');
             
-            // Lógica Formativa Formativa
             if (data.voto === atividadeData.gabarito) {
-                // ACERTOU
                 aluno.status = 'correto';
-                boxDica.classList.add('hidden'); // Esconde dica se houver
+                boxDica.classList.add('hidden'); 
             } else {
-                // ERROU
-                aluno.status = 'recusa_ativa'; // Mostra que errou e está recebendo dica
-                boxDica.classList.remove('hidden'); // Mostra dica gigante
+                aluno.status = 'recusa_ativa'; 
+                boxDica.classList.remove('hidden'); 
                 document.getElementById('tv-dica-texto').innerText = `Atenção ${aluno.nome}: Resposta incorreta! ${atividadeData.dica}`;
             }
 
-            renderizarGradeTV(); // Atualiza os blocos coloridos
+            renderizarGradeTV(); 
         }
 
         // --- LÓGICA DO SCANNER (Celular) ---
         function conectarATV() {
-            const peerIdDestino = document.getElementById('input-peer-id').value;
+            const peerIdDestino = document.getElementById('input-peer-id').value.trim();
+            
+            if(!peerIdDestino) {
+                alert("Por favor, digite ou cole o ID que está aparecendo na tela da TV.");
+                return;
+            }
+
             conn = peer.connect(peerIdDestino);
             
             conn.on('open', () => {
                 atualizarStatusConexao('Conectado à TV', true);
+                
+                // Força a exibição do painel de testes
+                const painelTestes = document.getElementById('painel-testes');
+                painelTestes.classList.remove('hidden');
+                painelTestes.style.display = 'block';
+
                 document.getElementById('scanner-status').classList.remove('hidden');
-                // Libera o painel de botões para teste
-                document.getElementById('painel-testes').classList.remove('hidden');
-                // Tenta iniciar a câmera
-                iniciarCamera();
+            });
+
+            conn.on('error', (err) => {
+                alert("Erro ao conectar: " + err);
             });
         }
 
         function enviarVotoP2P(idAluno, votoLetra) {
             if (conn && conn.open) {
-                // Envia pacote minúsculo (P2P via internet)
                 conn.send({ tipo: 'resposta_scan', aluno_id: idAluno, voto: votoLetra });
+                alert(`Voto [${votoLetra}] enviado para o telão com sucesso!`);
             } else {
                 alert("Você não está conectado à TV! Conecte primeiro.");
             }
         }
 
-        // --- LÓGICA DE INTERFACE (COMMON) ---
+        // --- VISÃO COMPUTACIONAL / CÂMERA (Celular) ---
+        function iniciarCamera() {
+            const video = document.getElementById('camera-feed');
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+                .then((stream) => { 
+                    video.srcObject = stream; 
+                    video.play();
+                })
+                .catch((err) => { 
+                    alert("Acesso à câmera bloqueado pelo navegador. " + err.message);
+                });
+        }
+
+        // --- LÓGICA DE INTERFACE COMUM ---
         function isTV() { return window.innerWidth > 640; }
 
         function atualizarStatusConexao(texto, sucesso) {
@@ -195,7 +218,7 @@
             
             Object.keys(atividadeData.turma).forEach(id => {
                 const aluno = atividadeData.turma[id];
-                let classeCard = "bg-gray-900 border border-gray-800 text-gray-500"; // PENDENTE
+                let classeCard = "bg-gray-900 border border-gray-800 text-gray-500"; 
 
                 if (aluno.status === 'correto') classeCard = "bg-emerald-950 border border-emerald-800 text-emerald-100 font-bold animate-pulse transform scale-105";
                 if (aluno.status === 'recusa_ativa') classeCard = "bg-amber-950 border border-amber-800 text-amber-100 font-medium transform scale-105";
@@ -207,16 +230,6 @@
                     </div>
                 `;
             });
-        }
-
-        // --- VISÃO COMPUTACIONAL LOCAL (OPENCV.JS NO CELULAR) ---
-        function iniciarCamera() {
-            const video = document.getElementById('camera-feed');
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-                .then((stream) => { video.srcObject = stream; })
-                .catch((err) => { 
-                    console.warn("Aviso: Câmera não pôde iniciar, mas você pode usar o painel de simulação.", err);
-                });
         }
     </script>
 </body>
