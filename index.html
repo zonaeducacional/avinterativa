@@ -6,43 +6,108 @@
     <title>π Plickers Livre P2P - FOSS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://docs.opencv.org/4.7.0/opencv.js" type="text/javascript"></script>
     <style>
-        /* Design responsivo e Dark Mode */
-        @media (max-width: 640px) { #area-tv { display: none; } #area-scanner { display: block; } }
-        @media (min-width: 641px) { #area-tv { display: block; } #area-scanner { display: none; } }
-        #camera-feed { transform: scaleX(-1); } /* Espelha a câmera para o professor */
+        .oculto { display: none !important; }
+        #camera-feed { transform: scaleX(-1); }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen p-4 font-sans">
+<body class="bg-gray-950 text-gray-100 min-h-screen p-4 sm:p-8 font-sans selection:bg-teal-500 selection:text-white">
 
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center pb-4 mb-6 border-b border-gray-800 gap-4">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-8 border-b border-gray-800 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-teal-400 font-mono">π Livre <span class="text-gray-600">P2P</span></h1>
-                <p class="text-xs text-gray-500">Software Livre de Avaliação Formativa Distribuída</p>
+                <h1 class="text-3xl font-bold text-teal-400 font-mono cursor-pointer" onclick="voltarAoMenu()">π Plickers Livre <span class="text-gray-600">P2P</span></h1>
+                <p class="text-xs text-gray-500">Avaliação Formativa e Inclusiva (Local-First)</p>
             </div>
-            <div id="status-conexao" class="text-xs px-3 py-1.5 rounded-full font-mono bg-red-950 text-red-400 border border-red-900">
-                Aguardando Conexão...
+            <div id="status-conexao" class="text-xs px-3 py-1.5 rounded-full font-mono bg-gray-900 text-gray-500 border border-gray-800">
+                Aguardando Seleção de Módulo...
             </div>
         </header>
 
-        <main id="area-tv" class="hidden">
-            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <main id="menu-inicial" class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-12">
+            
+            <div onclick="abrirModulo('painel')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-teal-700 p-8 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">⚙️</div>
+                <h2 class="text-xl font-bold text-teal-400 mb-2">Painel do Professor</h2>
+                <p class="text-sm text-gray-500">Cadastre alunos, turmas, crie as perguntas e defina as dicas formativas.</p>
+            </div>
+
+            <div onclick="abrirModulo('tv')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-blue-700 p-8 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">📺</div>
+                <h2 class="text-xl font-bold text-blue-400 mb-2">Modo Telão (TV)</h2>
+                <p class="text-sm text-gray-500">Abra esta tela no notebook e arraste para o projetor ou TV da sala.</p>
+            </div>
+
+            <div onclick="abrirModulo('scanner')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-emerald-700 p-8 rounded-3xl cursor-pointer transition transform hover:-translate-y-1 text-center group">
+                <div class="text-6xl mb-4 group-hover:scale-110 transition">📱</div>
+                <h2 class="text-xl font-bold text-emerald-400 mb-2">Scanner (Celular)</h2>
+                <p class="text-sm text-gray-500">Conecte a câmera do seu celular à TV para escanear os cartões via rede P2P.</p>
+            </div>
+
+        </main>
+
+        <main id="area-painel" class="oculto space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
+                <section class="bg-gray-900 border border-gray-800 rounded-3xl p-6">
+                    <h2 class="text-lg font-bold text-white mb-4 border-b border-gray-800 pb-2">👥 Turma / Equipes</h2>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <input id="form-aluno-id" type="number" placeholder="Nº" class="w-16 bg-gray-950 border border-gray-800 rounded-lg p-2 text-sm text-center text-teal-400 font-mono">
+                        <input id="form-aluno-nome" type="text" placeholder="Nome do Aluno ou Equipe" class="flex-1 bg-gray-950 border border-gray-800 rounded-lg p-2 text-sm text-white">
+                        <button onclick="salvarAluno()" class="bg-teal-700 hover:bg-teal-600 px-4 rounded-lg font-bold text-sm transition">+</button>
+                    </div>
+
+                    <div id="lista-alunos-painel" class="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        </div>
+                </section>
+
+                <section class="bg-gray-900 border border-gray-800 rounded-3xl p-6">
+                    <h2 class="text-lg font-bold text-white mb-4 border-b border-gray-800 pb-2">📝 Questão Ativa</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Enunciado da Pergunta</label>
+                            <textarea id="form-pergunta" rows="3" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-white focus:border-teal-500 outline-none transition" placeholder="Ex: Qual foi o argumento da defesa?"></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Gabarito Correto</label>
+                                <select id="form-gabarito" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-emerald-400 font-bold outline-none">
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C" selected>C</option>
+                                    <option value="D">D</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Dica Formativa (Se errar a 1ª tentativa)</label>
+                            <textarea id="form-dica" rows="2" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-amber-400 focus:border-teal-500 outline-none transition" placeholder="Dê uma pista para a segunda chance..."></textarea>
+                        </div>
+
+                        <button onclick="salvarQuestao()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2">💾 Salvar Questão no Banco Local</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <main id="area-tv" class="oculto">
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
                 <div class="xl:col-span-3 space-y-6">
                     <section class="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-2xl">
-                        <span class="text-sm font-mono text-gray-500 block mb-2">Questão 2</span>
-                        <h2 id="tv-pergunta" class="text-5xl font-extrabold text-white leading-tight">
-                            Qual foi o impacto principal da emancipação política de Salinas da Margarida em 1962?
-                        </h2>
+                        <span class="text-sm font-mono text-gray-500 block mb-2">Questão em Avaliação</span>
+                        <h2 id="tv-pergunta" class="text-4xl md:text-5xl font-extrabold text-white leading-tight">
+                            </h2>
                     </section>
 
                     <section class="bg-gray-900 border border-gray-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4 border-dashed border-teal-900">
                         <div id="tv-status-rodada" class="text-lg font-bold text-teal-400 animate-pulse">Aguardando Respostas via Internet...</div>
                         <div class="flex gap-2">
-                            <span class="text-sm font-mono bg-gray-800 px-3 py-2 rounded-lg text-emerald-400 border border-gray-700">Correção: C</span>
-                            <span class="text-sm font-mono bg-gray-800 px-3 py-2 rounded-lg text-amber-400 border border-gray-700">1ª Tentativa: Dica Ativa</span>
+                            <span id="tv-gabarito" class="text-sm font-mono bg-gray-800 px-3 py-2 rounded-lg text-emerald-400 border border-gray-700">Correção Oculta</span>
                         </div>
                     </section>
                 </div>
@@ -52,7 +117,7 @@
                         <span class="text-4xl">💡</span>
                         <h3 class="text-xl font-black text-amber-100 uppercase tracking-wider">Dica Formativa</h3>
                     </div>
-                    <p id="tv-dica-texto" class="text-sm text-amber-200 leading-relaxed font-medium">Lembre-se de revisar o documento sobre a emancipação política do município.</p>
+                    <p id="tv-dica-texto" class="text-sm text-amber-200 leading-relaxed font-medium"></p>
                 </aside>
             </div>
 
@@ -60,149 +125,85 @@
                 </section>
         </main>
 
-        <main id="area-scanner" class="hidden">
+        <main id="area-scanner" class="oculto max-w-md mx-auto">
             <section class="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-4">
-                <h2 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">📱 Scanner do Professor (P2P)</h2>
+                <h2 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">📱 Scanner (P2P)</h2>
                 
-                <div class="relative bg-black rounded-xl overflow-hidden border border-gray-800 aspect-[4/3] mb-4">
-                    <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
-                    <div class="absolute inset-0 flex items-center justify-center text-gray-700 text-xs font-mono">Câmera aqui</div>
-                </div>
-
                 <div class="space-y-2 mb-6">
-                    <input id="input-peer-id" type="text" placeholder="Cole o ID da TV aqui" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-teal-400 text-center">
-                    
-                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-lg shadow-lg transition">1. Conectar à TV</button>
-                    
-                    <button onclick="iniciarCamera()" class="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 font-bold text-sm py-3 rounded-lg shadow-lg transition">2. Ativar Lente da Câmera</button>
+                    <input id="input-peer-id" type="text" placeholder="ID da TV (Ex: 123-abc)" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-teal-400 text-center">
+                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-xl shadow-lg transition">1. Conectar à TV</button>
                 </div>
 
                 <div id="painel-testes" class="hidden border-t border-gray-800 pt-4 mt-2">
-                    <h3 class="text-xs font-mono text-teal-500 mb-3 uppercase tracking-wider text-center">Painel de Simulação de Votos</h3>
-                    
-                    <div class="grid grid-cols-1 gap-3">
-                        <button onclick="enviarVotoP2P(3, 'A')" class="bg-amber-950/80 hover:bg-amber-900 border border-amber-800 text-amber-400 font-medium text-sm py-4 rounded-xl shadow-lg active:bg-amber-900 transition">
-                            Simular: Grupo Acauã vota "A" (Erro)
-                        </button>
-                        
-                        <button onclick="enviarVotoP2P(1, 'C')" class="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 font-medium text-sm py-4 rounded-xl shadow-lg active:bg-emerald-900 transition">
-                            Simular: Ana Silva vota "C" (Acerto)
-                        </button>
+                    <h3 class="text-xs font-mono text-teal-500 mb-3 uppercase tracking-wider text-center">Simulador de Respostas (Turma Local)</h3>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <select id="simula-aluno" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-white outline-none"></select>
+                            <select id="simula-voto" class="w-20 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-white font-bold outline-none text-center">
+                                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                            </select>
+                        </div>
+                        <button onclick="dispararVotoP2P()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg transition">Enviar Voto ➔</button>
                     </div>
                 </div>
-            </section>
-            
-            <section id="scanner-status" class="hidden bg-gray-900 p-4 rounded-xl border border-teal-900 text-center font-mono text-teal-400 animate-pulse text-xs">
-                Conectado P2P. Varrendo a sala...
             </section>
         </main>
 
     </div>
 
     <script>
-        // --- CONFIGURAÇÃO PEDAGÓGICA LOCAL ---
-        const atividadeData = {
-            gabarito: 'C',
-            dica: 'Lembre-se de revisar o documento sobre a emancipação política do município.',
+        // --- 1. BANCO DE DADOS LOCAL (localStorage) ---
+        let dbLocal = {
+            questaoAtiva: {
+                pergunta: "Qual foi o impacto principal da emancipação de Salinas da Margarida em 1962?",
+                gabarito: "C",
+                dica: "Lembre-se de revisar o documento histórico sobre os limites do município."
+            },
             turma: {
-                1: { nome: "Ana Silva", status: "pendente" },
-                2: { nome: "Carlos Santos", status: "pendente" },
-                3: { nome: "Grupo Acauã", status: "pendente" },
-                4: { nome: "Grupo Corisco", status: "pendente" },
-                5: { nome: "João Pereira", status: "pendente" }
+                1: { nome: "Grupo Acauã", status: "pendente" },
+                2: { nome: "Grupo Corisco", "status": "pendente" },
+                3: { nome: "Ana Silva", status: "pendente" }
             }
         };
 
-        // --- INICIALIZAÇÃO DA REDE P2P (PEERJS) ---
-        const peer = new Peer(null, { debug: 2 });
-        let conn;
-
-        peer.on('open', (id) => {
-            document.getElementById('status-conexao').innerText = `ID da TV: ${id}`;
-            document.getElementById('status-conexao').className = "text-xs px-3 py-1.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-900";
-            if (isTV()) renderizarGradeTV();
-        });
-
-        // --- LÓGICA DA TV (Notebook) ---
-        peer.on('connection', (c) => {
-            conn = c;
-            atualizarStatusConexao('Conectado P2P', true);
-            
-            conn.on('data', (data) => {
-                if (data.tipo === 'resposta_scan') processarVotoNoTelão(data);
-            });
-        });
-
-        function processarVotoNoTelão(data) {
-            const aluno = atividadeData.turma[data.aluno_id];
-            if (!aluno) return;
-
-            const boxDica = document.getElementById('tv-dica-box');
-            
-            if (data.voto === atividadeData.gabarito) {
-                aluno.status = 'correto';
-                boxDica.classList.add('hidden'); 
-            } else {
-                aluno.status = 'recusa_ativa'; 
-                boxDica.classList.remove('hidden'); 
-                document.getElementById('tv-dica-texto').innerText = `Atenção ${aluno.nome}: Resposta incorreta! ${atividadeData.dica}`;
-            }
-
-            renderizarGradeTV(); 
+        // Carrega do disco se existir
+        function carregarBanco() {
+            const salvo = localStorage.getItem('plickers_db');
+            if(salvo) dbLocal = JSON.parse(salvo);
         }
-
-        // --- LÓGICA DO SCANNER (Celular) ---
-        function conectarATV() {
-            const peerIdDestino = document.getElementById('input-peer-id').value.trim();
-            
-            if(!peerIdDestino) {
-                alert("Por favor, digite ou cole o ID que está aparecendo na tela da TV.");
-                return;
-            }
-
-            conn = peer.connect(peerIdDestino);
-            
-            conn.on('open', () => {
-                atualizarStatusConexao('Conectado à TV', true);
-                
-                // Força a exibição do painel de testes
-                const painelTestes = document.getElementById('painel-testes');
-                painelTestes.classList.remove('hidden');
-                painelTestes.style.display = 'block';
-
-                document.getElementById('scanner-status').classList.remove('hidden');
-            });
-
-            conn.on('error', (err) => {
-                alert("Erro ao conectar: " + err);
-            });
+        function salvarBanco() {
+            localStorage.setItem('plickers_db', JSON.stringify(dbLocal));
+            renderizarPainel(); // Atualiza a tela
         }
+        carregarBanco();
 
-        function enviarVotoP2P(idAluno, votoLetra) {
-            if (conn && conn.open) {
-                conn.send({ tipo: 'resposta_scan', aluno_id: idAluno, voto: votoLetra });
-                alert(`Voto [${votoLetra}] enviado para o telão com sucesso!`);
-            } else {
-                alert("Você não está conectado à TV! Conecte primeiro.");
+        // --- 2. ROTEAMENTO DE TELAS ---
+        function abrirModulo(modulo) {
+            document.getElementById('menu-inicial').classList.add('oculto');
+            document.getElementById('area-painel').classList.add('oculto');
+            document.getElementById('area-tv').classList.add('oculto');
+            document.getElementById('area-scanner').classList.add('oculto');
+            
+            document.getElementById(`area-${modulo}`).classList.remove('oculto');
+
+            if(modulo === 'painel') {
+                atualizarStatusConexao('Modo Edição Local', true);
+                renderizarPainel();
+            }
+            if(modulo === 'tv') {
+                iniciarPeerTV();
+                carregarQuestaoTV();
+                renderizarGradeTV();
+            }
+            if(modulo === 'scanner') {
+                atualizarStatusConexao('Pronto para conectar', false);
+                preencherDropdownSimulador();
             }
         }
 
-        // --- VISÃO COMPUTACIONAL / CÂMERA (Celular) ---
-        function iniciarCamera() {
-            const video = document.getElementById('camera-feed');
-            
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-                .then((stream) => { 
-                    video.srcObject = stream; 
-                    video.play();
-                })
-                .catch((err) => { 
-                    alert("Acesso à câmera bloqueado pelo navegador. " + err.message);
-                });
+        function voltarAoMenu() {
+            location.reload(); // Forma mais limpa de resetar a aplicação e conexões
         }
-
-        // --- LÓGICA DE INTERFACE COMUM ---
-        function isTV() { return window.innerWidth > 640; }
 
         function atualizarStatusConexao(texto, sucesso) {
             const el = document.getElementById('status-conexao');
@@ -212,24 +213,147 @@
                 "text-xs px-3 py-1.5 rounded-full font-mono bg-red-950 text-red-400 border border-red-900";
         }
 
+        // --- 3. LÓGICA DO PAINEL DO PROFESSOR ---
+        function renderizarPainel() {
+            // Preenche Formulário da Questão
+            document.getElementById('form-pergunta').value = dbLocal.questaoAtiva.pergunta;
+            document.getElementById('form-gabarito').value = dbLocal.questaoAtiva.gabarito;
+            document.getElementById('form-dica').value = dbLocal.questaoAtiva.dica;
+
+            // Preenche Lista de Alunos
+            const lista = document.getElementById('lista-alunos-painel');
+            lista.innerHTML = '';
+            Object.keys(dbLocal.turma).forEach(id => {
+                lista.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-950 border border-gray-800 p-2 rounded-lg">
+                        <span class="text-xs text-gray-300"><strong class="text-teal-500 font-mono mr-2">${id}</strong> ${dbLocal.turma[id].nome}</span>
+                        <button onclick="removerAluno(${id})" class="text-red-500 hover:text-red-400 text-xs font-bold px-2">X</button>
+                    </div>
+                `;
+            });
+        }
+
+        function salvarQuestao() {
+            dbLocal.questaoAtiva.pergunta = document.getElementById('form-pergunta').value;
+            dbLocal.questaoAtiva.gabarito = document.getElementById('form-gabarito').value;
+            dbLocal.questaoAtiva.dica = document.getElementById('form-dica').value;
+            
+            // Reseta o status dos alunos para uma nova rodada
+            Object.keys(dbLocal.turma).forEach(id => dbLocal.turma[id].status = "pendente");
+            salvarBanco();
+            alert("Questão salva e status da turma resetado!");
+        }
+
+        function salvarAluno() {
+            const id = document.getElementById('form-aluno-id').value;
+            const nome = document.getElementById('form-aluno-nome').value;
+            if(!id || !nome) return alert("Preencha ID e Nome.");
+            
+            dbLocal.turma[id] = { nome: nome, status: "pendente" };
+            document.getElementById('form-aluno-id').value = '';
+            document.getElementById('form-aluno-nome').value = '';
+            salvarBanco();
+        }
+
+        function removerAluno(id) {
+            delete dbLocal.turma[id];
+            salvarBanco();
+        }
+
+        // --- 4. LÓGICA DA TV E REDE P2P (PeerJS) ---
+        let peer;
+        let conn;
+
+        function iniciarPeerTV() {
+            peer = new Peer(null, { debug: 2 });
+            peer.on('open', (id) => {
+                atualizarStatusConexao(`ID da TV: ${id}`, true);
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                conn.on('data', (data) => {
+                    if (data.tipo === 'resposta_scan') processarVotoNoTelão(data);
+                });
+            });
+        }
+
+        function carregarQuestaoTV() {
+            document.getElementById('tv-pergunta').innerText = dbLocal.questaoAtiva.pergunta;
+            document.getElementById('tv-gabarito').innerText = `Gabarito: ${dbLocal.questaoAtiva.gabarito}`;
+        }
+
+        function processarVotoNoTelão(data) {
+            const aluno = dbLocal.turma[data.aluno_id];
+            if (!aluno) return;
+
+            const boxDica = document.getElementById('tv-dica-box');
+            
+            if (data.voto === dbLocal.questaoAtiva.gabarito) {
+                aluno.status = 'correto';
+                boxDica.classList.add('hidden'); 
+            } else {
+                aluno.status = 'recusa_ativa'; 
+                boxDica.classList.remove('hidden'); 
+                document.getElementById('tv-dica-texto').innerText = `Atenção ${aluno.nome}: ${dbLocal.questaoAtiva.dica}`;
+            }
+
+            salvarBanco(); // Persiste a mudança de cor no banco
+            renderizarGradeTV(); 
+        }
+
         function renderizarGradeTV() {
             const container = document.getElementById('tv-grade-alunos');
             container.innerHTML = '';
             
-            Object.keys(atividadeData.turma).forEach(id => {
-                const aluno = atividadeData.turma[id];
+            Object.keys(dbLocal.turma).forEach(id => {
+                const aluno = dbLocal.turma[id];
                 let classeCard = "bg-gray-900 border border-gray-800 text-gray-500"; 
 
-                if (aluno.status === 'correto') classeCard = "bg-emerald-950 border border-emerald-800 text-emerald-100 font-bold animate-pulse transform scale-105";
-                if (aluno.status === 'recusa_ativa') classeCard = "bg-amber-950 border border-amber-800 text-amber-100 font-medium transform scale-105";
+                if (aluno.status === 'correto') classeCard = "bg-emerald-950 border border-emerald-800 text-emerald-100 font-bold animate-pulse transform scale-105 shadow-[0_0_15px_rgba(16,185,129,0.3)]";
+                if (aluno.status === 'recusa_ativa') classeCard = "bg-amber-950 border border-amber-800 text-amber-100 font-medium transform scale-105 shadow-[0_0_15px_rgba(245,158,11,0.2)]";
 
                 container.innerHTML += `
-                    <div class="p-5 rounded-2xl flex flex-col items-center gap-3 transition-all duration-300 ${classeCard}">
-                        <span class="text-5xl font-black font-mono bg-gray-950/60 w-16 h-16 flex items-center justify-center rounded-2xl border border-gray-800">${id}</span>
-                        <span class="text-xs text-center leading-tight h-8 flex items-center">${aluno.nome}</span>
+                    <div class="p-4 sm:p-5 rounded-2xl flex flex-col items-center gap-2 sm:gap-3 transition-all duration-300 ${classeCard}">
+                        <span class="text-3xl sm:text-5xl font-black font-mono bg-gray-950/60 w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded-xl border border-gray-800">${id}</span>
+                        <span class="text-[10px] sm:text-xs text-center leading-tight h-8 flex items-center">${aluno.nome}</span>
                     </div>
                 `;
             });
+        }
+
+        // --- 5. LÓGICA DO SCANNER (Celular) ---
+        function conectarATV() {
+            const peerIdDestino = document.getElementById('input-peer-id').value.trim();
+            if(!peerIdDestino) return alert("Cole o ID da TV.");
+
+            peer = new Peer(null, { debug: 2 });
+            peer.on('open', () => {
+                conn = peer.connect(peerIdDestino);
+                conn.on('open', () => {
+                    atualizarStatusConexao('Conectado à TV', true);
+                    document.getElementById('painel-testes').classList.remove('hidden');
+                });
+            });
+        }
+
+        function preencherDropdownSimulador() {
+            const select = document.getElementById('simula-aluno');
+            select.innerHTML = '';
+            Object.keys(dbLocal.turma).forEach(id => {
+                select.innerHTML += `<option value="${id}">[${id}] ${dbLocal.turma[id].nome}</option>`;
+            });
+        }
+
+        function dispararVotoP2P() {
+            const idAluno = document.getElementById('simula-aluno').value;
+            const votoLetra = document.getElementById('simula-voto').value;
+            
+            if (conn && conn.open) {
+                conn.send({ tipo: 'resposta_scan', aluno_id: idAluno, voto: votoLetra });
+            } else {
+                alert("Conecte à TV primeiro!");
+            }
         }
     </script>
 </body>
