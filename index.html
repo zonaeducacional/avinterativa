@@ -64,17 +64,31 @@
             <section class="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-4">
                 <h2 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">📱 Scanner do Professor (P2P)</h2>
                 
-                <div class="relative bg-black rounded-xl overflow-hidden border border-gray-800 aspect-[4/3]">
+                <div class="relative bg-black rounded-xl overflow-hidden border border-gray-800 aspect-[4/3] mb-4">
                     <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
-                    <canvas id="cv-canvas" class="absolute top-0 left-0 w-full h-full opacity-50"></canvas>
+                    <div class="absolute inset-0 flex items-center justify-center text-gray-700 text-xs font-mono">Câmera aqui</div>
                 </div>
 
-                <div class="mt-4 space-y-2">
-                    <input id="input-peer-id" type="text" placeholder="Cole o ID da TV aqui" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-teal-400">
-                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-lg transition shadow-lg">Conectar e Iniciar</button>
+                <div class="space-y-2 mb-6">
+                    <input id="input-peer-id" type="text" placeholder="Cole o ID da TV aqui" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-teal-400 text-center">
+                    <button onclick="conectarATV()" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm py-3 rounded-lg shadow-lg">1. Conectar à TV</button>
+                </div>
+
+                <div id="painel-testes" class="hidden border-t border-gray-800 pt-4">
+                    <h3 class="text-xs font-mono text-teal-500 mb-3 uppercase tracking-wider text-center">Painel de Simulação de Votos</h3>
+                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <button onclick="enviarVotoP2P(3, 'A')" class="bg-amber-950/80 hover:bg-amber-900 border border-amber-800 text-amber-400 font-medium text-sm py-4 rounded-xl shadow-lg active:bg-amber-900 transition">
+                            Simular: Grupo Acauã vota "A" (Erro)
+                        </button>
+                        
+                        <button onclick="enviarVotoP2P(1, 'C')" class="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-400 font-medium text-sm py-4 rounded-xl shadow-lg active:bg-emerald-900 transition">
+                            Simular: Ana Silva vota "C" (Acerto)
+                        </button>
+                    </div>
                 </div>
             </section>
-
+            
             <section id="scanner-status" class="hidden bg-gray-900 p-4 rounded-xl border border-teal-900 text-center font-mono text-teal-400 animate-pulse text-xs">
                 Conectado P2P. Varrendo a sala...
             </section>
@@ -148,6 +162,9 @@
             conn.on('open', () => {
                 atualizarStatusConexao('Conectado à TV', true);
                 document.getElementById('scanner-status').classList.remove('hidden');
+                // Libera o painel de botões para teste
+                document.getElementById('painel-testes').classList.remove('hidden');
+                // Tenta iniciar a câmera
                 iniciarCamera();
             });
         }
@@ -156,6 +173,8 @@
             if (conn && conn.open) {
                 // Envia pacote minúsculo (P2P via internet)
                 conn.send({ tipo: 'resposta_scan', aluno_id: idAluno, voto: votoLetra });
+            } else {
+                alert("Você não está conectado à TV! Conecte primeiro.");
             }
         }
 
@@ -178,11 +197,11 @@
                 const aluno = atividadeData.turma[id];
                 let classeCard = "bg-gray-900 border border-gray-800 text-gray-500"; // PENDENTE
 
-                if (aluno.status === 'correto') classeCard = "bg-emerald-950 border border-emerald-800 text-emerald-100 font-bold animate-pulse";
-                if (aluno.status === 'recusa_ativa') classeCard = "bg-amber-950 border border-amber-800 text-amber-100 font-medium";
+                if (aluno.status === 'correto') classeCard = "bg-emerald-950 border border-emerald-800 text-emerald-100 font-bold animate-pulse transform scale-105";
+                if (aluno.status === 'recusa_ativa') classeCard = "bg-amber-950 border border-amber-800 text-amber-100 font-medium transform scale-105";
 
                 container.innerHTML += `
-                    <div class="p-5 rounded-2xl flex flex-col items-center gap-3 transition ${classeCard}">
+                    <div class="p-5 rounded-2xl flex flex-col items-center gap-3 transition-all duration-300 ${classeCard}">
                         <span class="text-5xl font-black font-mono bg-gray-950/60 w-16 h-16 flex items-center justify-center rounded-2xl border border-gray-800">${id}</span>
                         <span class="text-xs text-center leading-tight h-8 flex items-center">${aluno.nome}</span>
                     </div>
@@ -191,19 +210,14 @@
         }
 
         // --- VISÃO COMPUTACIONAL LOCAL (OPENCV.JS NO CELULAR) ---
-        // Nota: Esta parte está simplificada e requer a inclusão de bibliotecas ArUco JS
-        // Para este protótipo, o envio de voto será simulado.
         function iniciarCamera() {
             const video = document.getElementById('camera-feed');
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
                 .then((stream) => { video.srcObject = stream; })
-                .catch((err) => { console.error("Erro ao acessar câmera:", err); alert("Acesso à câmera negado. O WebRTC requer HTTPS."); });
+                .catch((err) => { 
+                    console.warn("Aviso: Câmera não pôde iniciar, mas você pode usar o painel de simulação.", err);
+                });
         }
-
-        // SIMULADOR DE SCANNER (PARA TESTES)
-        // No hardware real, a visão computacional chamaria 'enviarVotoP2P(1, 'A')' ao ler o cartão
-        // Para testar, cole este comando no console do seu celular após conectar:
-        // enviarVotoP2P(1, 'A'); // Ana Silva votou 'A' (Errado, Gabarito C)
     </script>
 </body>
 </html>
